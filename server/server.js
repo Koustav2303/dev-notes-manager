@@ -20,6 +20,7 @@ app.use(express.json());
 
 // --- API Routes ---
 // Any request that starts with '/api/notes' is sent to your notes routing file
+app.use('/api/auth', require('./routes/auth'));
 app.use('/api/notes', require('./routes/notes'));
 
 // A simple health check route so you can test if the server is awake in your browser
