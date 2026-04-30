@@ -114,29 +114,27 @@ const useAppStore = create((set, get) => ({
   },
 
   // 3. Delete a note
-  // From useAppStore.js
-deleteNote: async (id) => {
-  const { user } = get();
-  if (!user || !user.token) return;
+  deleteNote: async (id) => {
+    const { user } = get();
+    if (!user || !user.token) return;
 
-  try {
-    const response = await fetch(`http://127.0.0.1:5001/api/notes/${id}`, {
-      method: 'DELETE',
-      headers: {
-        Authorization: `Bearer ${user.token}`,
-      },
-    });
+    try {
+      const response = await fetch(`http://127.0.0.1:5001/api/notes/${id}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+        },
+      });
 
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
-    // This line ensures the card vanishes from your screen instantly
-    set((state) => ({ 
-      notes: state.notes.filter((note) => note._id !== id) 
-    }));
-  } catch (error) {
-    console.error("Error deleting note:", error);
-  }
-},
+      set((state) => ({ 
+        notes: state.notes.filter((note) => note._id !== id) 
+      }));
+    } catch (error) {
+      console.error("Error deleting note:", error);
+    }
+  },
 
   // 4. Update a note
   updateNote: async (id, updatedData) => {
