@@ -14,8 +14,14 @@ const app = express();
 
 // --- Middleware ---
 // CORS allows your React app (running on a different port) to talk to this backend
-app.use(cors()); 
-// This allows your server to accept and read JSON data sent in requests
+const cors = require('cors');
+
+// Add this before your routes:
+app.use(cors({
+  origin: 'http://localhost:5173', // Your Vite frontend URL
+  methods: ['GET', 'POST', 'PUT', 'DELETE'], // Explicitly allow DELETE!
+  credentials: true
+}));
 app.use(express.json()); 
 
 // --- API Routes ---

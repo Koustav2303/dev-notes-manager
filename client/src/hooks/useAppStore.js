@@ -4,7 +4,6 @@ import { create } from 'zustand';
 const storedUser = localStorage.getItem('devnotes_user');
 const initialUser = storedUser ? JSON.parse(storedUser) : null;
 
-// Notice we added 'get' next to 'set' here! This allows us to read our own state.
 const useAppStore = create((set, get) => ({
   // ==========================================
   // --- USER AUTHENTICATION STATE & ACTIONS ---
@@ -57,7 +56,7 @@ const useAppStore = create((set, get) => ({
 
   logoutUser: () => {
     localStorage.removeItem('devnotes_user');
-    set({ user: null, notes: [] }); // Clear notes on logout for security!
+    set({ user: null, notes: [] }); 
   },
 
   // ==========================================
@@ -67,9 +66,8 @@ const useAppStore = create((set, get) => ({
   isLoading: false,
   error: null,
 
-  // 1. Fetch all notes from MongoDB (SECURED)
+  // 1. Fetch all notes
   fetchNotes: async () => {
-    // Grab the current user's token from the state
     const { user } = get();
     if (!user || !user.token) return;
 
@@ -77,7 +75,6 @@ const useAppStore = create((set, get) => ({
     try {
       const response = await fetch('http://127.0.0.1:5001/api/notes', {
         headers: {
-          // Attach the VIP pass!
           Authorization: `Bearer ${user.token}`,
         },
       }); 
@@ -92,9 +89,8 @@ const useAppStore = create((set, get) => ({
     }
   },
 
-  // 2. Save a new note to MongoDB (SECURED)
+  // 2. Save a new note
   addNote: async (noteData) => {
-    // Grab the current user's token from the state
     const { user } = get();
     if (!user || !user.token) return;
 
@@ -103,7 +99,6 @@ const useAppStore = create((set, get) => ({
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // Attach the VIP pass!
           Authorization: `Bearer ${user.token}`,
         },
         body: JSON.stringify(noteData),
@@ -112,10 +107,61 @@ const useAppStore = create((set, get) => ({
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
       const newNote = await response.json();
-      
       set((state) => ({ notes: [newNote, ...state.notes] }));
     } catch (error) {
       console.error("Error saving note:", error);
+    }
+  },
+
+  // 3. Delete a note
+  // From useAppStore.js
+deleteNote: async (id) => {
+  const { user } = get();
+  if (!user || !user.token) return;
+
+  try {
+    const response = await fetch(`http://127.0.0.1:5001/api/notes/${id}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${user.token}`,
+      },
+    });
+
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+    // This line ensures the card vanishes from your screen instantly
+    set((state) => ({ 
+      notes: state.notes.filter((note) => note._id !== id) 
+    }));
+  } catch (error) {
+    console.error("Error deleting note:", error);
+  }
+},
+
+  // 4. Update a note
+  updateNote: async (id, updatedData) => {
+    const { user } = get();
+    if (!user || !user.token) return;
+
+    try {
+      const response = await fetch(`http://127.0.0.1:5001/api/notes/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify(updatedData),
+      });
+
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+      const updatedNote = await response.json();
+
+      set((state) => ({
+        notes: state.notes.map((note) => (note._id === id ? updatedNote : note)),
+      }));
+    } catch (error) {
+      console.error("Error updating note:", error);
     }
   },
   

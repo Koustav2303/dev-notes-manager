@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router();
-const { getNotes, createNote } = require('../controllers/noteController');
-
-// Import the Security Guard middleware
+const { getNotes, createNote, updateNote, deleteNote } = require('../controllers/noteController');
 const { protect } = require('../middleware/authMiddleware');
 
-// Add the 'protect' middleware before the controller functions
-// If 'protect' fails, the request never reaches getNotes or createNote
 router.route('/')
   .get(protect, getNotes)
   .post(protect, createNote);
+
+router.route('/:id')
+  .put(protect, updateNote)
+  .delete(protect, deleteNote);
 
 module.exports = router;
