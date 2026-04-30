@@ -4,16 +4,15 @@ import { create } from 'zustand';
 const storedUser = localStorage.getItem('devnotes_user');
 const initialUser = storedUser ? JSON.parse(storedUser) : null;
 
-const useAppStore = create((set) => ({
+// Notice we added 'get' next to 'set' here! This allows us to read our own state.
+const useAppStore = create((set, get) => ({
   // ==========================================
   // --- USER AUTHENTICATION STATE & ACTIONS ---
   // ==========================================
   user: initialUser,
   
-  // Directly set user (rarely needed outside of the auth functions below)
   setUser: (user) => set({ user }),
 
-  // 1. Register a New User
   registerUser: async (username, email, password) => {
     set({ isLoading: true, error: null });
     try {
@@ -24,21 +23,17 @@ const useAppStore = create((set) => ({
       });
       const data = await response.json();
       
-      if (!response.ok) {
-        throw new Error(data.message || 'Registration failed');
-      }
+      if (!response.ok) throw new Error(data.message || 'Registration failed');
       
-      // Save the generated JWT token and user info to the browser
       localStorage.setItem('devnotes_user', JSON.stringify(data));
       set({ user: data, isLoading: false });
-      return true; // Let the UI component know it was successful
+      return true; 
     } catch (error) {
       set({ error: error.message, isLoading: false });
-      return false; // Let the UI component know it failed
+      return false; 
     }
   },
 
-  // 2. Login an Existing User
   loginUser: async (email, password) => {
     set({ isLoading: true, error: null });
     try {
@@ -49,11 +44,8 @@ const useAppStore = create((set) => ({
       });
       const data = await response.json();
       
-      if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
-      }
+      if (!response.ok) throw new Error(data.message || 'Login failed');
       
-      // Save the generated JWT token and user info to the browser
       localStorage.setItem('devnotes_user', JSON.stringify(data));
       set({ user: data, isLoading: false });
       return true;
@@ -63,10 +55,9 @@ const useAppStore = create((set) => ({
     }
   },
 
-  // 3. Logout User
   logoutUser: () => {
     localStorage.removeItem('devnotes_user');
-    set({ user: null });
+    set({ user: null, notes: [] }); // Clear notes on logout for security!
   },
 
   // ==========================================
@@ -76,15 +67,22 @@ const useAppStore = create((set) => ({
   isLoading: false,
   error: null,
 
-  // 1. Fetch all notes from MongoDB
+  // 1. Fetch all notes from MongoDB (SECURED)
   fetchNotes: async () => {
+    // Grab the current user's token from the state
+    const { user } = get();
+    if (!user || !user.token) return;
+
     set({ isLoading: true, error: null });
     try {
-      const response = await fetch('http://127.0.0.1:5001/api/notes'); 
+      const response = await fetch('http://127.0.0.1:5001/api/notes', {
+        headers: {
+          // Attach the VIP pass!
+          Authorization: `Bearer ${user.token}`,
+        },
+      }); 
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
       
       const data = await response.json();
       set({ notes: data, isLoading: false });
@@ -94,24 +92,27 @@ const useAppStore = create((set) => ({
     }
   },
 
-  // 2. Save a new note to MongoDB
+  // 2. Save a new note to MongoDB (SECURED)
   addNote: async (noteData) => {
+    // Grab the current user's token from the state
+    const { user } = get();
+    if (!user || !user.token) return;
+
     try {
       const response = await fetch('http://127.0.0.1:5001/api/notes', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          // Attach the VIP pass!
+          Authorization: `Bearer ${user.token}`,
         },
         body: JSON.stringify(noteData),
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
 
       const newNote = await response.json();
       
-      // Add the newly created note directly into the UI state so it shows up instantly
       set((state) => ({ notes: [newNote, ...state.notes] }));
     } catch (error) {
       console.error("Error saving note:", error);
