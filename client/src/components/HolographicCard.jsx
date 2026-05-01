@@ -1,69 +1,77 @@
 import { useRef, useState } from 'react';
 
-const HolographicCard = ({ children }) => {
+const HolographicCard = ({ children, isFlipped, backContent }) => {
   const cardRef = useRef(null);
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
   const [isHovering, setIsHovering] = useState(false);
-  const [transformStyle, setTransformStyle] = useState('');
 
   const handleMouseMove = (e) => {
     if (!cardRef.current) return;
-
     const rect = cardRef.current.getBoundingClientRect();
-    const x = e.clientX - rect.left; // Mouse X relative to the card
-    const y = e.clientY - rect.top;  // Mouse Y relative to the card
-
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
     setMousePosition({ x, y });
-
-    // Calculate 3D tilt math
-    const centerX = rect.width / 2;
-    const centerY = rect.height / 2;
-    const rotateX = ((y - centerY) / centerY) * -4; // Max rotation of 4 degrees
-    const rotateY = ((x - centerX) / centerX) * 4;
-
-    setTransformStyle(`perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`);
   };
 
-  const handleMouseEnter = () => setIsHovering(true);
-  
-  const handleMouseLeave = () => {
-    setIsHovering(false);
-    setTransformStyle('perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)');
+  // Base 3D transform math based on hover and flip state
+  const getTransform = () => {
+    if (isFlipped) {
+      // When flipped, disable mouse tilt and just show the back
+      return 'perspective(1000px) rotateY(180deg)';
+    }
+    
+    if (isHovering && cardRef.current) {
+      // Apply mouse tilt when hovering on the front
+      const rect = cardRef.current.getBoundingClientRect();
+      const centerX = rect.width / 2;
+      const centerY = rect.height / 2;
+      const rotateX = ((mousePosition.y - centerY) / centerY) * -4;
+      const rotateY = ((mousePosition.x - centerX) / centerX) * 4;
+      return `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
+    }
+
+    // Default resting state
+    return 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale3d(1, 1, 1)';
   };
 
   return (
     <div
       ref={cardRef}
       onMouseMove={handleMouseMove}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
+      onMouseEnter={() => setIsHovering(true)}
+      onMouseLeave={() => setIsHovering(false)}
       style={{
-        transform: transformStyle,
-        transition: isHovering ? 'transform 0.1s ease-out' : 'transform 0.5s ease-out',
+        transform: getTransform(),
+        transformStyle: 'preserve-3d',
+        transition: isHovering && !isFlipped ? 'transform 0.1s ease-out' : 'transform 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
       }}
-      className="relative group rounded-2xl bg-slate-900/60 backdrop-blur-md flex flex-col h-[340px] z-10"
+      className="relative group w-full h-[340px] z-10 cursor-default"
     >
-      {/* --- The Magical Mouse Spotlight Border --- */}
+      {/* --- FRONT OF CARD --- */}
       <div 
-        className="absolute inset-0 z-0 rounded-2xl pointer-events-none transition-opacity duration-500"
-        style={{
-          opacity: isHovering ? 1 : 0,
-          background: `radial-gradient(600px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(16, 185, 129, 0.15), transparent 40%)`
-        }}
-      />
-      
-      {/* --- The Inner Highlight (Shines on the glass) --- */}
-      <div 
-        className="absolute inset-[1px] z-0 rounded-2xl pointer-events-none transition-opacity duration-500 bg-slate-900/90"
-        style={{
-          opacity: isHovering ? 1 : 0,
-          background: `radial-gradient(400px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(255, 255, 255, 0.04), transparent 40%)`
-        }}
-      />
+        className="absolute inset-0 w-full h-full rounded-2xl bg-slate-900/60 backdrop-blur-md flex flex-col border border-slate-700/60 group-hover:border-transparent overflow-hidden"
+        style={{ backfaceVisibility: 'hidden' }}
+      >
+        {/* Spotlight Effect */}
+        <div 
+          className="absolute inset-0 z-0 rounded-2xl pointer-events-none transition-opacity duration-500"
+          style={{
+            opacity: isHovering && !isFlipped ? 1 : 0,
+            background: `radial-gradient(600px circle at ${mousePosition.x}px ${mousePosition.y}px, rgba(16, 185, 129, 0.15), transparent 40%)`
+          }}
+        />
+        <div className="relative z-10 flex flex-col h-full">{children}</div>
+      </div>
 
-      {/* The actual content sits on top of the effects */}
-      <div className="relative z-10 flex flex-col h-full border border-slate-700/60 group-hover:border-transparent rounded-2xl overflow-hidden">
-        {children}
+      {/* --- BACK OF CARD (THE SANDBOX) --- */}
+      <div 
+        className="absolute inset-0 w-full h-full rounded-2xl bg-slate-900/95 backdrop-blur-xl flex flex-col border-2 border-emerald-500/50 overflow-hidden shadow-[0_0_50px_rgba(16,185,129,0.2)]"
+        style={{ 
+          backfaceVisibility: 'hidden',
+          transform: 'rotateY(180deg)' // This is crucial so it's not mirrored when flipped!
+        }}
+      >
+        {backContent}
       </div>
     </div>
   );

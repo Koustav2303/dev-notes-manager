@@ -1,6 +1,9 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import useAppStore from './hooks/useAppStore';
 
+// --- Global Components ---
+import CommandPalette from './components/CommandPalette';
+
 // --- Pages ---
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -14,8 +17,13 @@ function App() {
   return (
     <Router>
       {/* Global Wrapper for consistent background and text colors */}
-      <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-emerald-500/30">
+      <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-emerald-500/30 relative">
         
+        {/* --- GLOBAL OVERLAYS --- */}
+        {/* The Omni-Command Palette is injected globally here so Cmd+K works everywhere */}
+        <CommandPalette />
+
+        {/* --- MAIN ROUTING --- */}
         <main className="container mx-auto px-4 py-8">
           <Routes>
             {/* 1. Default Route: Send users to Dashboard if logged in, otherwise Login */}
