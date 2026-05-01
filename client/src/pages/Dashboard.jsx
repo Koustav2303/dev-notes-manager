@@ -7,48 +7,51 @@ import HolographicCard from '../components/HolographicCard';
 import CodeSandbox from '../components/CodeSandbox';
 import GistModal from '../components/GistModal';
 import Toast from '../components/Toast';
+import VaultGalaxy from '../components/VaultGalaxy';
 
 const Dashboard = () => {
   const { user, notes, fetchNotes, addNote, deleteNote, updateNote, logoutUser, isLoading } = useAppStore();
   const navigate = useNavigate();
   
-  // Form State
+  // --- Form State ---
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [language, setLanguage] = useState('javascript');
   const [folder, setFolder] = useState('');
   const [tags, setTags] = useState('');
   
-  // UI State
+  // --- UI & Interaction State ---
   const [editingId, setEditingId] = useState(null);
   const [activeFolder, setActiveFolder] = useState('All');
   const [flippedCardId, setFlippedCardId] = useState(null);
+  const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'galaxy'
   
-  // GitHub Integration State
+  // --- GitHub Integration State ---
   const [gistNoteParams, setGistNoteParams] = useState(null);
   const [toastData, setToastData] = useState(null);
 
   const notesGridRef = useRef(null);
 
+  // Fetch notes on mount
   useEffect(() => {
     fetchNotes();
   }, [fetchNotes]);
 
-  // Derived Data: Get all unique folders from the user's notes
+  // Derived Data: Extract unique folders
   const uniqueFolders = useMemo(() => {
     const folders = notes.map(note => note.folder || 'Uncategorized');
     return ['All', ...new Set(folders)];
   }, [notes]);
 
-  // Filter notes based on the active folder tab
+  // Derived Data: Filter notes by active folder
   const displayedNotes = useMemo(() => {
     if (activeFolder === 'All') return notes;
     return notes.filter(note => (note.folder || 'Uncategorized') === activeFolder);
   }, [notes, activeFolder]);
 
-  // Entrance Animation when active folder changes
+  // GSAP Entrance Animation for the Grid
   useEffect(() => {
-    if (displayedNotes.length > 0 && notesGridRef.current) {
+    if (viewMode === 'grid' && displayedNotes.length > 0 && notesGridRef.current) {
       gsap.fromTo(
         notesGridRef.current.children,
         { y: 30, opacity: 0, scale: 0.98 },
@@ -63,13 +66,12 @@ const Dashboard = () => {
         }
       );
     }
-  }, [displayedNotes]);
+  }, [displayedNotes, viewMode]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!title || !content) return;
 
-    // Convert comma-separated string to an array and clean up spaces
     const tagsArray = tags.split(',').map(tag => tag.trim()).filter(Boolean);
     const finalFolder = folder.trim() || 'Uncategorized';
 
@@ -80,7 +82,7 @@ const Dashboard = () => {
       await addNote({ title, content, language, folder: finalFolder, tags: tagsArray });
     }
     
-    // Clear form
+    // Reset Form
     setTitle('');
     setContent('');
     setLanguage('javascript');
@@ -129,10 +131,23 @@ const Dashboard = () => {
           </h1>
           <p className="text-slate-400 mt-2 text-sm font-medium tracking-wide uppercase">Your encrypted code repository</p>
         </div>
-        <div className="relative z-10 flex items-center gap-4 mt-6 md:mt-0 w-full md:w-auto">
+        
+        <div className="relative z-10 flex flex-wrap items-center gap-4 mt-6 md:mt-0 w-full md:w-auto">
+          {/* Galaxy / Grid Toggle */}
+          <button 
+            onClick={() => setViewMode(prev => prev === 'grid' ? 'galaxy' : 'grid')}
+            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-slate-800/80 hover:bg-slate-700 text-emerald-400 text-sm font-bold rounded-xl transition-colors border border-slate-700 shadow-lg"
+          >
+            {viewMode === 'grid' ? (
+              <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5"></path></svg> Galaxy View</>
+            ) : (
+              <><svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg> Grid View</>
+            )}
+          </button>
+
           <button onClick={() => navigate('/search')} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-sm font-bold rounded-xl transition-all border border-emerald-500/30 hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-            Search Vault
+            Search
           </button>
           <button onClick={handleLogout} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-sm font-bold rounded-xl transition-colors border border-slate-700 shadow-lg">
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
@@ -204,145 +219,164 @@ const Dashboard = () => {
           </form>
         </div>
 
-        {/* --- RIGHT COLUMN: NOTES GRID --- */}
+        {/* --- RIGHT COLUMN: VISUALIZATION & GRID --- */}
         <div className="lg:col-span-8 space-y-6">
           
-          {/* FOLDER NAVIGATION TABS */}
-          <div className="flex overflow-x-auto pb-4 custom-scrollbar gap-2 border-b border-slate-800">
-            {uniqueFolders.map((folderName) => (
-              <button 
-                key={folderName} 
-                onClick={() => { 
-                  setActiveFolder(folderName); 
-                  setFlippedCardId(null); 
-                }}
-                className={`whitespace-nowrap px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 flex items-center gap-2 ${activeFolder === folderName ? 'bg-emerald-500 text-slate-900 shadow-[0_0_15px_rgba(16,185,129,0.3)] scale-105' : 'bg-slate-900/50 text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-slate-700/50'}`}
-              >
-                <svg className="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
-                {folderName}
-              </button>
-            ))}
-          </div>
-
-          {displayedNotes.length === 0 ? (
-            <div className="bg-slate-900/40 border-2 border-slate-800/50 rounded-3xl p-16 text-center border-dashed flex flex-col items-center justify-center h-72">
-              <svg className="w-12 h-12 text-slate-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
-              <p className="text-slate-400 text-lg font-medium">No snippets found in '{activeFolder}'.</p>
+          {viewMode === 'galaxy' ? (
+            
+            /* --- RENDER THE 3D GALAXY VIEW --- */
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <VaultGalaxy 
+                notes={notes} 
+                onSnippetClick={(fullNote) => {
+                  setViewMode('grid');
+                  setActiveFolder(fullNote.folder || 'Uncategorized');
+                  setTimeout(() => handleEditClick(fullNote), 100);
+                }} 
+              />
             </div>
+            
           ) : (
-            <div ref={notesGridRef} className="grid grid-cols-1 xl:grid-cols-2 gap-8 perspective-[2000px]">
-              {displayedNotes.map((note) => {
-                const isFlipped = flippedCardId === note._id;
-                const canRun = note.language === 'javascript' || note.language === 'html';
+            
+            /* --- RENDER THE CLASSIC GRID VIEW --- */
+            <>
+              {/* Folder Navigation Tabs */}
+              <div className="flex overflow-x-auto pb-4 custom-scrollbar gap-2 border-b border-slate-800">
+                {uniqueFolders.map((folderName) => (
+                  <button 
+                    key={folderName} 
+                    onClick={() => { 
+                      setActiveFolder(folderName); 
+                      setFlippedCardId(null); 
+                    }}
+                    className={`whitespace-nowrap px-5 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 flex items-center gap-2 ${activeFolder === folderName ? 'bg-emerald-500 text-slate-900 shadow-[0_0_15px_rgba(16,185,129,0.3)] scale-105' : 'bg-slate-900/50 text-slate-400 hover:bg-slate-800 hover:text-slate-200 border border-slate-700/50'}`}
+                  >
+                    <svg className="w-4 h-4 opacity-70" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+                    {folderName}
+                  </button>
+                ))}
+              </div>
 
-                return (
-                  <div key={note._id} className="relative z-10">
-                    <HolographicCard 
-                      isFlipped={isFlipped}
-                      backContent={
-                        <div className="flex flex-col h-full">
-                          <div className="flex justify-between items-center px-4 py-3 bg-slate-950 border-b border-slate-800">
-                            <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
-                              <span className="animate-pulse w-2 h-2 rounded-full bg-emerald-500"></span> Live Execution Sandbox
+              {displayedNotes.length === 0 ? (
+                <div className="bg-slate-900/40 border-2 border-slate-800/50 rounded-3xl p-16 text-center border-dashed flex flex-col items-center justify-center h-72">
+                  <svg className="w-12 h-12 text-slate-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+                  <p className="text-slate-400 text-lg font-medium">No snippets found in '{activeFolder}'.</p>
+                </div>
+              ) : (
+                <div ref={notesGridRef} className="grid grid-cols-1 xl:grid-cols-2 gap-8 perspective-[2000px]">
+                  {displayedNotes.map((note) => {
+                    const isFlipped = flippedCardId === note._id;
+                    const canRun = note.language === 'javascript' || note.language === 'html';
+
+                    return (
+                      <div key={note._id} className="relative z-10">
+                        <HolographicCard 
+                          isFlipped={isFlipped}
+                          backContent={
+                            <div className="flex flex-col h-full">
+                              <div className="flex justify-between items-center px-4 py-3 bg-slate-950 border-b border-slate-800">
+                                <div className="flex items-center gap-2 text-emerald-400 font-bold text-sm">
+                                  <span className="animate-pulse w-2 h-2 rounded-full bg-emerald-500"></span> Live Execution Sandbox
+                                </div>
+                                <button 
+                                  onClick={() => setFlippedCardId(null)}
+                                  className="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1 rounded transition-colors text-xs font-bold"
+                                >
+                                  Close Preview
+                                </button>
+                              </div>
+                              <div className="flex-grow p-4">
+                                <CodeSandbox code={note.content} language={note.language} />
+                              </div>
                             </div>
-                            <button 
-                              onClick={() => setFlippedCardId(null)}
-                              className="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 px-3 py-1 rounded transition-colors text-xs font-bold"
-                            >
-                              Close Preview
-                            </button>
-                          </div>
-                          <div className="flex-grow p-4">
-                            <CodeSandbox code={note.content} language={note.language} />
-                          </div>
-                        </div>
-                      }
-                    >
-                      {/* Decorative Window Controls & Folder Name */}
-                      <div className="bg-slate-950/50 px-5 py-3 border-b border-slate-800 flex items-center justify-between z-10">
-                        <div className="flex gap-2">
-                          <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
-                          <div className="w-3 h-3 rounded-full bg-amber-500/80"></div>
-                          <div className="w-3 h-3 rounded-full bg-emerald-500/80"></div>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 flex items-center gap-1">
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
-                            {note.folder || 'Uncategorized'}
-                          </span>
-                          <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-500/80">
-                            {note.language}
-                          </span>
-                        </div>
-                      </div>
-                      
-                      <div className="p-6 flex-grow flex flex-col relative z-10">
-                        <h3 className="text-xl font-bold text-slate-100 truncate mb-4 pr-12">{note.title}</h3>
-                        
-                        <div className="bg-slate-950 rounded-xl p-4 flex-grow overflow-hidden relative shadow-inner border border-slate-800/50 mb-4">
-                          <div className="absolute inset-0 p-4 pb-12 overflow-hidden">
-                            <CodeBlock code={note.content} language={note.language} />
-                          </div>
-                          <div className="absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-slate-950 to-transparent pointer-events-none z-10"></div>
-                        </div>
-
-                        {/* TAGS BADGES */}
-                        {note.tags && note.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-auto">
-                            {note.tags.slice(0, 3).map((tag, idx) => (
-                              <span key={idx} className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 bg-slate-800/80 text-emerald-300 rounded border border-slate-700/50">
-                                #{tag}
+                          }
+                        >
+                          {/* Decorative Window Controls & Folder Name */}
+                          <div className="bg-slate-950/50 px-5 py-3 border-b border-slate-800 flex items-center justify-between z-10">
+                            <div className="flex gap-2">
+                              <div className="w-3 h-3 rounded-full bg-red-500/80"></div>
+                              <div className="w-3 h-3 rounded-full bg-amber-500/80"></div>
+                              <div className="w-3 h-3 rounded-full bg-emerald-500/80"></div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <span className="text-[10px] font-extrabold uppercase tracking-widest text-slate-500 flex items-center gap-1">
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+                                {note.folder || 'Uncategorized'}
                               </span>
-                            ))}
-                            {note.tags.length > 3 && (
-                              <span className="text-[10px] font-bold text-slate-500 px-1 py-1">+{note.tags.length - 3}</span>
-                            )}
+                              <span className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-500/80">
+                                {note.language}
+                              </span>
+                            </div>
                           </div>
-                        )}
-
-                        {/* Action Buttons Overlay */}
-                        <div className="absolute top-4 right-4 flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
                           
-                          {/* GITHUB GIST BUTTON */}
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setGistNoteParams(note);
-                            }}
-                            className="p-2 bg-slate-200 hover:bg-white text-slate-900 rounded-lg transition-colors shadow-lg"
-                            title="Publish to GitHub Gist"
-                          >
-                            <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
-                          </button>
+                          <div className="p-6 flex-grow flex flex-col relative z-10">
+                            <h3 className="text-xl font-bold text-slate-100 truncate mb-4 pr-12">{note.title}</h3>
+                            
+                            <div className="bg-slate-950 rounded-xl p-4 flex-grow overflow-hidden relative shadow-inner border border-slate-800/50 mb-4">
+                              <div className="absolute inset-0 p-4 pb-12 overflow-hidden">
+                                <CodeBlock code={note.content} language={note.language} />
+                              </div>
+                              <div className="absolute bottom-0 left-0 w-full h-16 bg-gradient-to-t from-slate-950 to-transparent pointer-events-none z-10"></div>
+                            </div>
 
-                          {/* RUN BUTTON */}
-                          {canRun && (
-                            <button 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setFlippedCardId(note._id);
-                              }}
-                              className="p-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg transition-colors shadow-[0_0_15px_rgba(16,185,129,0.4)]"
-                              title="Run Code in Sandbox"
-                            >
-                              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd"></path></svg>
-                            </button>
-                          )}
+                            {/* TAGS BADGES */}
+                            {note.tags && note.tags.length > 0 && (
+                              <div className="flex flex-wrap gap-2 mt-auto">
+                                {note.tags.slice(0, 3).map((tag, idx) => (
+                                  <span key={idx} className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 bg-slate-800/80 text-emerald-300 rounded border border-slate-700/50">
+                                    #{tag}
+                                  </span>
+                                ))}
+                                {note.tags.length > 3 && (
+                                  <span className="text-[10px] font-bold text-slate-500 px-1 py-1">+{note.tags.length - 3}</span>
+                                )}
+                              </div>
+                            )}
 
-                          <button onClick={() => handleEditClick(note)} className="p-2 bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white rounded-lg transition-colors shadow-lg" title="Edit Snippet">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
-                          </button>
-                          <button onClick={() => deleteNote(note._id)} className="p-2 bg-slate-800 hover:bg-red-600 text-slate-300 hover:text-white rounded-lg transition-colors shadow-lg" title="Delete Snippet">
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                          </button>
-                        </div>
+                            {/* Action Buttons Overlay */}
+                            <div className="absolute top-4 right-4 flex gap-2 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-20">
+                              
+                              {/* GITHUB GIST BUTTON */}
+                              <button 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setGistNoteParams(note);
+                                }}
+                                className="p-2 bg-slate-200 hover:bg-white text-slate-900 rounded-lg transition-colors shadow-lg"
+                                title="Publish to GitHub Gist"
+                              >
+                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+                              </button>
+
+                              {/* RUN BUTTON */}
+                              {canRun && (
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setFlippedCardId(note._id);
+                                  }}
+                                  className="p-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 rounded-lg transition-colors shadow-[0_0_15px_rgba(16,185,129,0.4)]"
+                                  title="Run Code in Sandbox"
+                                >
+                                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd"></path></svg>
+                                </button>
+                              )}
+
+                              <button onClick={() => handleEditClick(note)} className="p-2 bg-slate-800 hover:bg-emerald-600 text-slate-300 hover:text-white rounded-lg transition-colors shadow-lg" title="Edit Snippet">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                              </button>
+                              <button onClick={() => deleteNote(note._id)} className="p-2 bg-slate-800 hover:bg-red-600 text-slate-300 hover:text-white rounded-lg transition-colors shadow-lg" title="Delete Snippet">
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                              </button>
+                            </div>
+                          </div>
+                        </HolographicCard>
                       </div>
-                      
-                    </HolographicCard>
-                  </div>
-                );
-              })}
-            </div>
+                    );
+                  })}
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
