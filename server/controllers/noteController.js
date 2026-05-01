@@ -17,12 +17,16 @@ const getNotes = async (req, res) => {
 // @access  Private
 const createNote = async (req, res) => {
   try {
-    const { title, content, language } = req.body;
+    // 1. Extract the new fields from the request body
+    const { title, content, language, folder, tags } = req.body;
 
+    // 2. Save them to the database
     const note = await Note.create({
       title,
       content,
       language,
+      folder: folder || 'Uncategorized',
+      tags: tags || [],
       user: req.user.id, 
     });
 
